@@ -1,0 +1,12 @@
+# Plashker — runtime dependencies
+# Python 3.12+
+
+# Image compositing engine
+Pillow==12.1.1
+
+# Used for fast inverted-alpha safe-zone bbox math
+numpy>=2.0
+
+# Desktop shell (HTML/CSS/JS UI hosted in a native window).
+# On Linux this needs a system webview backend — see README ("Linux").
+pywebview>=5.0

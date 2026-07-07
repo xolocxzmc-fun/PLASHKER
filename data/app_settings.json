@@ -1,0 +1,20 @@
+{
+  "horizontal": {
+    "ad_label": {
+      "file": "global_assets/ad_label_h.png"
+    },
+    "our_legal": {
+      "file": "global_assets/our_legal_h.png"
+    }
+  },
+  "vertical": {
+    "ad_and_legal_combined": {
+      "file": "global_assets/ad_legal_combined_v.png"
+    }
+  },
+  "preview_background": {
+    "file": "global_assets/preview_bg.png",
+    "fit_mode": "cover"
+  },
+  "theme": "light"
+}

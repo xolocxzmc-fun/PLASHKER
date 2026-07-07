@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plashker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ЭКРАН-ПРИВЕТСТВИЕ (с интро-анимацией) -------------------------------- -->
+  <div class="welcome" id="welcome">
+    <button class="icon-btn welcome-settings-btn" id="btn-app-settings-welcome" title="Настройки приложения" aria-label="Настройки приложения">⚙</button>
+    <div class="box intro" id="welcome-box">
+      <div class="brand-row">
+        <div class="brand-mark">
+          <svg class="pk-logo" width="92" height="92" viewBox="0 0 120 116" fill="none" id="welcome-logo" aria-label="Plashker">
+            <g class="pk-bodygrp">
+              <g class="pk-arm"><path d="M37 56 H18"/><path class="pk-fore-l" d="M18 56 V34"/></g>
+              <g class="pk-arm"><path d="M83 56 H102"/><path class="pk-fore-r" d="M102 56 V34"/></g>
+              <path class="pk-leg-l" d="M50 86 V104"/>
+              <path class="pk-leg-r" d="M70 86 V104"/>
+              <rect class="pk-body" x="37" y="40" width="46" height="46" rx="5"/>
+              <path class="pk-eye" d="M47 52 H54"/>
+              <path class="pk-eye" d="M66 52 H73"/>
+            </g>
+          </svg>
+        </div>
+        <h1 class="wordmark">
+          <svg class="pk-wordmark" viewBox="0 0 281 86" fill="none" role="img" aria-label="Plashker">
+            <path d="M6 16 V70"/><path d="M6 16 A 16 16 0 0 1 6 48"/>
+            <path d="M35 16 V70"/>
+            <path d="M63 37 A 15 15 0 1 0 63 67 A 15 15 0 1 0 63 37"/><path d="M78 37 V70"/>
+            <path d="M117 41 C 117 34 91 33 91 46 C 91 56 117 54 117 64 C 117 74 91 73 91 66"/>
+            <path d="M130 16 V70"/><path d="M130 44 C 130 35 158 35 158 47 V70"/>
+            <path d="M171 16 V70"/><path d="M195 38 L 173 54"/><path d="M176 51 L 197 70"/>
+            <path d="M212 48 H234"/><path d="M234 48 C 235 34 210 35 210 53 C 210 70 226 72 238 64"/>
+            <path d="M252 34 V70"/><path d="M252 45 C 252 36 272 35 275 43"/>
+          </svg>
+        </h1>
+      </div>
+      <div class="actions welcome-actions">
+        <button class="btn-export" id="btn-new">Новый проект</button>
+        <button class="btn-secondary" id="btn-open">Открыть проект…</button>
+        <button class="btn-secondary" id="btn-demo">Демо «MICHAEL»</button>
+      </div>
+
+      <!-- Мои проекты (недавние .plshk) -->
+      <div class="recents" id="recents" style="display:none">
+        <div class="recents-head">Мои проекты</div>
+        <div class="recents-list" id="recents-list"></div>
+      </div>
+    </div>
+
+    <!-- кредит — прижат к самому низу экрана (п.1) -->
+    <div class="credit-line">
+      <span class="credit-label">Created by</span>
+      <span class="credit-name">Igor Morozov</span>
+    </div>
+  </div>
+
+  <!-- ЭКРАН СОЗДАНИЯ ПРОЕКТА (импорт исходных элементов) -------------------- -->
+  <div class="welcome" id="create" style="display:none">
+    <div class="box create-box">
+      <h2 class="create-title">Новый проект</h2>
+
+      <div class="field-name">
+        <label for="new-title">Название фильма</label>
+        <input type="text" id="new-title" placeholder="Например, MICHAEL" autocomplete="off">
+      </div>
+
+      <p class="create-hint">Перетащите исходные PNG в каждую зону (или нажмите, чтобы выбрать файл). Минимум 300×100px (ВО — 100×100).</p>
+
+      <div class="drop-zones">
+        <div class="drop-card" data-kind="title">
+          <div class="drop-ico">
+            <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+              <rect x="6" y="14" width="36" height="20" rx="4" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M14 24h20M14 28h12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M24 8v4M24 36v4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="drop-label">Тайтл</div>
+          <div class="drop-state" data-state>Перетащите PNG</div>
+        </div>
+
+        <div class="drop-card" data-kind="date">
+          <div class="drop-ico">
+            <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+              <rect x="8" y="10" width="32" height="30" rx="4" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M8 18h32" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M16 6v8M32 6v8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="18" cy="27" r="2.4" fill="currentColor"/>
+              <circle cx="24" cy="27" r="2.4" fill="currentColor"/>
+              <circle cx="30" cy="27" r="2.4" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="drop-label">Дата</div>
+          <div class="drop-state" data-state>Перетащите PNG</div>
+        </div>
+
+        <div class="drop-card" data-kind="rating">
+          <div class="drop-ico">
+            <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+              <circle cx="24" cy="24" r="16" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M24 16v10M19 21h10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+              <path d="M19 31h10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="drop-label">ВО (рейтинг)</div>
+          <div class="drop-state" data-state>Перетащите PNG</div>
+        </div>
+      </div>
+
+      <p class="create-hint create-hint-opt">Необязательно:</p>
+      <div class="drop-zones drop-zones-opt">
+        <div class="drop-card drop-card-sm" data-kind="date_now">
+          <div class="drop-ico">
+            <svg viewBox="0 0 48 48" width="32" height="32" fill="none">
+              <rect x="8" y="10" width="32" height="30" rx="4" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M8 18h32" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M24 28l-4 4 4 4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="drop-label">Уже в кино</div>
+          <div class="drop-state" data-state>Перетащите PNG</div>
+        </div>
+
+        <div class="drop-card drop-card-sm" data-kind="date_kz">
+          <div class="drop-ico">
+            <svg viewBox="0 0 48 48" width="32" height="32" fill="none">
+              <rect x="8" y="10" width="32" height="30" rx="4" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M8 18h32" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M16 6v8M32 6v8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="24" cy="27" r="3" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="drop-label">Дата для KZ</div>
+          <div class="drop-state" data-state>Перетащите PNG</div>
+        </div>
+
+        <div class="drop-card drop-card-sm" data-kind="rating_kz">
+          <div class="drop-ico">
+            <svg viewBox="0 0 48 48" width="32" height="32" fill="none">
+              <rect x="11" y="11" width="26" height="26" rx="5" transform="rotate(45 24 24)" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M24 18v8M20 22h8M20 30h8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="drop-label">ВО для KZ</div>
+          <div class="drop-state" data-state>Перетащите PNG</div>
+        </div>
+      </div>
+
+      <div class="create-actions">
+        <button class="btn-secondary" id="create-back">← Назад</button>
+        <button class="btn-export" id="create-enter" disabled>Создать проект</button>
+      </div>
+      <div class="create-note" id="create-note"></div>
+    </div>
+  </div>
+
+  <!-- ОСНОВНОЙ ЭКРАН (4 зоны) ---------------------------------------------- -->
+  <div class="app" id="app" style="display:none">
+
+    <!-- ЗОНА 1: верх -->
+    <header class="topbar">
+      <div class="logo">
+        <!-- кнопка выхода из проекта (п.5) -->
+        <button class="icon-btn back-btn" id="btn-exit" title="Выйти в начало">←</button>
+        <svg class="pk-logo" width="70" height="70" viewBox="0 0 120 116" fill="none" aria-label="Plashker">
+          <g class="pk-bodygrp">
+            <g class="pk-arm"><path d="M37 56 H18"/><path class="pk-fore-l" d="M18 56 V34"/></g>
+            <g class="pk-arm"><path d="M83 56 H102"/><path class="pk-fore-r" d="M102 56 V34"/></g>
+            <path class="pk-leg-l" d="M50 86 V104"/>
+            <path class="pk-leg-r" d="M70 86 V104"/>
+            <rect class="pk-body" x="37" y="40" width="46" height="46" rx="5"/>
+            <path class="pk-eye" d="M47 52 H54"/>
+            <path class="pk-eye" d="M66 52 H73"/>
+          </g>
+        </svg>
+        <svg class="pk-wordmark name" viewBox="0 0 281 86" fill="none" role="img" aria-label="Plashker">
+          <path d="M6 16 V70"/><path d="M6 16 A 16 16 0 0 1 6 48"/>
+          <path d="M35 16 V70"/>
+          <path d="M63 37 A 15 15 0 1 0 63 67 A 15 15 0 1 0 63 37"/><path d="M78 37 V70"/>
+          <path d="M117 41 C 117 34 91 33 91 46 C 91 56 117 54 117 64 C 117 74 91 73 91 66"/>
+          <path d="M130 16 V70"/><path d="M130 44 C 130 35 158 35 158 47 V70"/>
+          <path d="M171 16 V70"/><path d="M195 38 L 173 54"/><path d="M176 51 L 197 70"/>
+          <path d="M212 48 H234"/><path d="M234 48 C 235 34 210 35 210 53 C 210 70 226 72 238 64"/>
+          <path d="M252 34 V70"/><path d="M252 45 C 252 36 272 35 275 43"/>
+        </svg>
+        <span class="movie-chip" id="movie-chip">—</span>
+      </div>
+      <!-- верхняя шестерёнка = глобальные настройки приложения -->
+      <div class="topbar-right">
+        <div class="toast" id="toast"></div>
+        <button class="icon-btn info-btn" id="btn-hotkeys" title="Горячие клавиши">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        </button>
+        <button class="icon-btn gear-lg" id="btn-app-settings" title="Настройки приложения (РЕКЛАМА, юр.информация, Safe Zones)">⚙</button>
+      </div>
+    </header>
+
+    <!-- ЗОНА 2: левая панель настроек формата -->
+    <aside class="side">
+      <h2 id="side-title">Настройки</h2>
+
+      <!-- переключатель Дата / Уже в кино (v0.13) -->
+      <div class="date-variant-toggle" id="date-variant-toggle" style="display:none">
+        <button class="dv-btn active" data-variant="date">Дата</button>
+        <button class="dv-btn" data-variant="now">Уже в кино</button>
+      </div>
+      <div class="sync-mode-actions" id="sync-mode-actions" style="display:none">
+        <button class="btn-secondary sync-mode-btn" id="btn-sync-date" data-sync-variant="date">Sync Date</button>
+        <button class="btn-secondary sync-mode-btn" id="btn-sync-now" data-sync-variant="now">Sync Now</button>
+      </div>
+
+      <div class="control" data-field="title_scale_pct" data-elem="title">
+        <div class="row"><label>Тайтл</label><span class="pxout" data-px></span></div>
+        <input type="range" step="0.1">
+      </div>
+      <div class="control" data-field="date_scale_pct" data-elem="date">
+        <div class="row"><label>Дата</label><span class="pxout" data-px></span></div>
+        <input type="range" step="0.1">
+      </div>
+      <div class="control" data-field="gap_title_date_pct" data-elem="gap">
+        <div class="row"><label>Отступ название → дата</label><span class="pxout" data-px></span></div>
+        <input type="range" step="0.1">
+      </div>
+      <div class="control" data-field="rating_scale_pct" data-elem="rating">
+        <div class="row"><label>Возрастной рейтинг</label><span class="pxout" data-px></span></div>
+        <input type="range" step="0.1">
+      </div>
+
+      <div class="divider" id="legal-divider"></div>
+
+      <details id="legal-details">
+        <summary class="section-toggle" id="legal-h2">Юридический блок</summary>
+        <div class="legal-section" id="legal-section"><!-- наполняется по ориентации --></div>
+      </details>
+
+      <div class="divider"></div>
+
+      <details id="advanced-details">
+        <summary class="section-toggle">Расширенные настройки</summary>
+        <div class="advanced-section" id="advanced-section"><!-- наполняется динамически --></div>
+      </details>
+
+      <div id="warning-slot"></div>
+    </aside>
+
+    <!-- ЗОНА 3: превью -->
+    <section class="stage">
+      <div class="stage-bar">
+        <label><input type="checkbox" id="chk-safe"><span class="chk-vis" aria-hidden="true"></span> Safe Zone</label>
+        <label><input type="checkbox" id="chk-aim"><span class="chk-vis" aria-hidden="true"></span> Прицел</label>
+        <label><input type="checkbox" id="chk-bg" checked><span class="chk-vis" aria-hidden="true"></span> Фон</label>
+        <div class="zoom">
+          <button class="zoom-btn" id="zoom-fit" title="Вписать">⤢</button>
+          zoom <input type="number" id="zoom-input" value="100" min="10" max="400" step="5" inputmode="numeric"> %
+        </div>
+      </div>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <div class="canvas-zoom" id="canvas-zoom">
+          <img id="preview" alt="превью плашки">
+        </div>
+      </div>
+    </section>
+
+    <!-- ЗОНА 4: лента карточек -->
+    <footer class="lane">
+      <div class="lane-body">
+        <!-- кнопка «Заменить» — открывает модалку со всеми элементами (п.2 v0.5.2) -->
+        <div class="replace-wrap" style="padding-bottom:38px; align-self:flex-end">
+          <button class="btn-secondary" id="btn-replace-all">Заменить…</button>
+        </div>
+        <div class="regions" id="regions"></div>
+
+        <div class="cards-scroll">
+          <div class="cards" id="cards"></div>
+        </div>
+
+        <div class="export-group">
+          <button class="btn-export" id="btn-export">Экспорт</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- МОДАЛКА НАСТРОЕК ПРИЛОЖЕНИЯ (п.8) ------------------------------------ -->
+  <div class="modal-backdrop" id="modal-app">
+    <div class="modal">
+      <h3>Настройки приложения</h3>
+
+      <!-- переключатель темы — сверху (п.5) -->
+      <div class="theme-row">
+        <div class="theme-label">
+          <span class="theme-title">Тёмная тема</span>
+          <span class="theme-sub">Глобально для всего приложения</span>
+        </div>
+        <div class="theme-toggle" id="theme-toggle" role="button" tabindex="0" aria-label="Переключить светлую/тёмную тему" title="Переключить светлую/тёмную тему">
+          <span class="tt-ico tt-sun" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/>
+            </svg>
+          </span>
+          <span class="tt-ico tt-moon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 14.5A7.8 7.8 0 0 1 9.5 3a8 8 0 1 0 11.5 11.5z"/>
+            </svg>
+          </span>
+          <span class="tt-knob" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <p class="modal-sub">Глобальные ассеты — общие для всех проектов. Перетащите PNG на карточку (или нажмите), чтобы заменить.</p>
+      <div class="field">
+        <label>Глобальные ассеты</label>
+        <div id="as-globals" class="asset-grid"></div>
+      </div>
+      <div class="field">
+        <label>Safe-zone рамки форматов</label>
+        <div id="as-safe" class="asset-grid"></div>
+      </div>
+      <div class="actions">
+        <button class="btn-secondary" data-close="modal-app">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА ЭКСПОРТА ----------------------------------------------------- -->
+  <div class="modal-backdrop" id="modal-export">
+    <div class="modal modal-export">
+      <h3>Экспорт плашек</h3>
+      <p class="modal-sub">Каждый формат экспортируется в двух PNG (полная + без юр.инфо) и PSD. Папки: 16x9, 9x16, 4x5, 1x1, BYYD, KZ.</p>
+
+      <div class="field">
+        <label>Форматы файлов</label>
+        <div class="opt-list">
+          <label class="opt-row">
+            <span class="opt-text"><span class="opt-name">PNG</span></span>
+            <input type="checkbox" id="exp-png" checked class="switch"><span class="switch-vis" aria-hidden="true"></span>
+          </label>
+          <label class="opt-row">
+            <span class="opt-text"><span class="opt-name">JPEG</span></span>
+            <input type="checkbox" id="exp-jpeg" class="switch"><span class="switch-vis" aria-hidden="true"></span>
+          </label>
+          <label class="opt-row">
+            <span class="opt-text"><span class="opt-name">PSD</span></span>
+            <input type="checkbox" id="exp-psd" class="switch"><span class="switch-vis" aria-hidden="true"></span>
+          </label>
+          <label class="opt-row" id="exp-now-row">
+            <span class="opt-text"><span class="opt-name">Версия «Уже в кино»</span></span>
+            <input type="checkbox" id="exp-now" checked class="switch"><span class="switch-vis" aria-hidden="true"></span>
+          </label>
+          <label class="opt-row" id="exp-platform-row">
+            <span class="opt-text"><span class="opt-name">Версия «с юр.информацией площадки»</span></span>
+            <input type="checkbox" id="exp-platform" class="switch"><span class="switch-vis" aria-hidden="true"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label>Форматы к экспорту</label>
+          <button type="button" class="link-btn" id="exp-toggle-all">Выбрать все</button>
+        </div>
+        <div id="exp-formats" class="chip-grid"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-secondary" data-close="modal-export">Отмена</button>
+        <button class="btn-export" id="exp-run">Экспортировать…</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА ЗАМЕНЫ ЭЛЕМЕНТОВ (п.2 v0.5.2 — все три элемента сразу) -------- -->
+  <div class="modal-backdrop" id="modal-replace">
+    <div class="replace-screen replace-screen-all">
+      <div class="rs-header">
+        <h3>Заменить элементы</h3>
+      </div>
+      <div class="rs-rows" id="replace-rows">
+        <!-- наполняется динамически: 3 строки (title / date / rating) -->
+      </div>
+      <div class="rs-actions">
+        <button class="btn-secondary" id="replace-back">← Назад</button>
+        <button class="btn-export" id="replace-save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА ГОРЯЧИХ КЛАВИШ (п.3 v0.5.1) ---------------------------------- -->
+  <div class="modal-backdrop" id="modal-hotkeys">
+    <div class="modal modal-hotkeys">
+      <h3>Горячие клавиши</h3>
+      <div class="hotkey-list">
+        <div class="hk-row"><span class="hk-keys"><kbd>⌘</kbd><kbd>S</kbd></span><span class="hk-desc">Сохранить проект</span></div>
+        <div class="hk-row"><span class="hk-keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>S</kbd></span><span class="hk-desc">Сохранить как… (дубликат)</span></div>
+        <div class="hk-row"><span class="hk-keys"><kbd>⌘</kbd><kbd>Z</kbd></span><span class="hk-desc">Отменить редактирование</span></div>
+        <div class="hk-row"><span class="hk-keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>Z</kbd></span><span class="hk-desc">Повторить редактирование</span></div>
+        <div class="hk-row"><span class="hk-keys"><kbd>←</kbd> <kbd>→</kbd></span><span class="hk-desc">Переключить формат</span></div>
+        <div class="hk-row"><span class="hk-keys"><kbd>Ctrl</kbd>+<kbd>колесо</kbd></span><span class="hk-desc">Зум к курсору</span></div>
+        <div class="hk-row"><span class="hk-keys">Колесо / трекпад</span><span class="hk-desc">Панорамирование</span></div>
+        <div class="hk-row"><span class="hk-keys">Двойной клик</span><span class="hk-desc">Сбросить зум</span></div>
+        <div class="hk-row"><span class="hk-keys">Перетащить</span><span class="hk-desc">Панорама (как «рука»)</span></div>
+      </div>
+      <div class="actions">
+        <button class="btn-secondary" data-close="modal-hotkeys">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА «СОХРАНИТЬ ПЕРЕД ВЫХОДОМ?» (п.7 v0.10) ---------------------- -->
+  <div class="modal-backdrop" id="modal-exit">
+    <div class="modal modal-exit">
+      <h3>Сохранить проект?</h3>
+      <p class="modal-sub">Несохранённые изменения будут потеряны.</p>
+      <div class="actions exit-actions">
+        <button class="btn-secondary" id="exit-cancel">Отмена</button>
+        <button class="btn-secondary" id="exit-nosave" style="color:var(--cherry)">Не сохранять</button>
+        <button class="btn-export" id="exit-save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

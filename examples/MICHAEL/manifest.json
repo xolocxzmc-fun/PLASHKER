@@ -1,0 +1,300 @@
+{
+  "version": 1,
+  "project_meta": {
+    "movie_title": "MICHAEL",
+    "project_file_path": "examples/MICHAEL/MICHAEL.plshk",
+    "created_at": "2026-06-27T12:00:00Z",
+    "modified_at": "2026-06-27T12:00:00Z"
+  },
+  "elements": {
+    "title": {
+      "file": "assets/title.png",
+      "has_alpha": true,
+      "anchor_axis": "width",
+      "content_bbox_pct": [
+        0.0505,
+        0.1626,
+        0.9621,
+        0.8374
+      ]
+    },
+    "by_region": {
+      "RU": {
+        "date_variants": {
+          "active": "date",
+          "items": {
+            "date": {
+              "file": "assets/date_ru_date.png",
+              "has_alpha": true,
+              "anchor_axis": "width",
+              "content_bbox_pct": [
+                0.0577,
+                0.2073,
+                0.9389,
+                0.7927
+              ]
+            },
+            "now": {
+              "file": "assets/date_ru_now.png",
+              "has_alpha": true,
+              "anchor_axis": "width",
+              "content_bbox_pct": [
+                0.0366,
+                0.2073,
+                0.9601,
+                0.7927
+              ]
+            }
+          }
+        },
+        "rating": {
+          "file": "assets/rating_ru.png",
+          "has_alpha": true,
+          "anchor_axis": "height",
+          "content_bbox_pct": [
+            0.1179,
+            0.1732,
+            0.884,
+            0.8268
+          ]
+        }
+      },
+      "KZ": {
+        "date_variants": {
+          "active": "date",
+          "items": {
+            "date": {
+              "file": "assets/date_kz_date.png",
+              "has_alpha": true,
+              "anchor_axis": "width",
+              "content_bbox_pct": [
+                0.053,
+                0.1394,
+                0.9459,
+                0.8606
+              ]
+            }
+          }
+        },
+        "rating": {
+          "file": "assets/rating_kz.png",
+          "has_alpha": true,
+          "anchor_axis": "height",
+          "content_bbox_pct": [
+            0.1103,
+            0.1103,
+            0.8897,
+            0.8897
+          ]
+        }
+      },
+      "BY": {
+        "date_variants": null,
+        "rating": null
+      }
+    }
+  },
+  "active_region": "RU",
+  "region_visibility": {
+    "RU": true,
+    "KZ": true,
+    "BY": false
+  },
+  "formats": {
+    "16x9": {
+      "region": "RU",
+      "visible": true,
+      "linked": true,
+      "settings": {
+        "title_scale_pct": 16.56,
+        "date_scale_pct": 10.1,
+        "rating_scale_pct": 7.41,
+        "gap_title_date_pct": 1.48
+      },
+      "legal": {
+        "show_platform_legal": false,
+        "platform_legal_file": null,
+        "gap_legal_pct": 1.5,
+        "show_ad_label": true,
+        "show_our_legal": true,
+        "ad_label_scale_pct": 6.09,
+        "our_legal_scale_pct": 28.65
+      }
+    },
+    "9x16": {
+      "region": "RU",
+      "visible": true,
+      "linked": true,
+      "settings": {
+        "title_scale_pct": 35.65,
+        "date_scale_pct": 21.85,
+        "rating_scale_pct": 4.9,
+        "gap_title_date_pct": 1.09
+      },
+      "legal": {
+        "show_platform_legal": false,
+        "platform_legal_file": null,
+        "gap_legal_pct": 1.5,
+        "show_ad_label": true,
+        "show_our_legal": true,
+        "combined_scale_pct": 28.8,
+        "combined_offset_y_pct": -63.22
+      }
+    },
+    "4x5": {
+      "region": "RU",
+      "visible": true,
+      "linked": true,
+      "settings": {
+        "title_scale_pct": 30.37,
+        "date_scale_pct": 18.52,
+        "rating_scale_pct": 6.22,
+        "gap_title_date_pct": 1.19
+      },
+      "legal": {
+        "show_platform_legal": false,
+        "platform_legal_file": null,
+        "gap_legal_pct": 1.5,
+        "show_ad_label": true,
+        "show_our_legal": true,
+        "ad_label_scale_pct": 9.26,
+        "our_legal_scale_pct": 42.59
+      }
+    },
+    "1x1": {
+      "region": "RU",
+      "visible": true,
+      "linked": true,
+      "settings": {
+        "title_scale_pct": 25.37,
+        "date_scale_pct": 15.56,
+        "rating_scale_pct": 6.48,
+        "gap_title_date_pct": 1.11
+      },
+      "legal": {
+        "show_platform_legal": false,
+        "platform_legal_file": null,
+        "gap_legal_pct": 1.5,
+        "show_ad_label": true,
+        "show_our_legal": true,
+        "ad_label_scale_pct": 7.87,
+        "our_legal_scale_pct": 36.39
+      }
+    },
+    "byyd_1024x768": {
+      "region": "RU",
+      "visible": true,
+      "linked": true,
+      "settings": {
+        "title_scale_pct": 24.12,
+        "date_scale_pct": 23.54,
+        "rating_scale_pct": 7.16,
+        "gap_title_date_pct": 1.56
+      },
+      "legal": {
+        "show_platform_legal": false,
+        "platform_legal_file": null,
+        "gap_legal_pct": 1.5,
+        "show_ad_label": true,
+        "show_our_legal": true,
+        "ad_label_scale_pct": 6.84,
+        "our_legal_scale_pct": 31.25
+      }
+    },
+    "byyd_768x1024": {
+      "region": "RU",
+      "visible": true,
+      "linked": true,
+      "settings": {
+        "title_scale_pct": 37.24,
+        "date_scale_pct": 25.65,
+        "rating_scale_pct": 5.86,
+        "gap_title_date_pct": 1.66
+      },
+      "legal": {
+        "show_platform_legal": false,
+        "platform_legal_file": null,
+        "gap_legal_pct": 1.5,
+        "show_ad_label": true,
+        "show_our_legal": true,
+        "ad_label_scale_pct": 9.11,
+        "our_legal_scale_pct": 41.67
+      }
+    },
+    "byyd_480x320": {
+      "region": "RU",
+      "visible": true,
+      "linked": true,
+      "settings": {
+        "title_scale_pct": 27.71,
+        "date_scale_pct": 24.58,
+        "rating_scale_pct": 10.0,
+        "gap_title_date_pct": 2.5
+      },
+      "legal": {
+        "show_platform_legal": false,
+        "platform_legal_file": null,
+        "gap_legal_pct": 1.5,
+        "show_ad_label": true,
+        "show_our_legal": true,
+        "ad_label_scale_pct": 9.17,
+        "our_legal_scale_pct": 41.67
+      }
+    },
+    "byyd_320x480": {
+      "region": "RU",
+      "visible": true,
+      "linked": true,
+      "settings": {
+        "title_scale_pct": 41.56,
+        "date_scale_pct": 31.25,
+        "rating_scale_pct": 5.83,
+        "gap_title_date_pct": 1.04
+      },
+      "legal": {
+        "show_platform_legal": false,
+        "platform_legal_file": null,
+        "gap_legal_pct": 1.5,
+        "show_ad_label": true,
+        "show_our_legal": true,
+        "ad_label_scale_pct": 11.25,
+        "our_legal_scale_pct": 51.56
+      }
+    },
+    "da_1280x720": {
+      "region": "RU",
+      "visible": true,
+      "linked": true,
+      "settings": {
+        "title_scale_pct": 20.0,
+        "date_scale_pct": 12.0,
+        "rating_scale_pct": 8.0,
+        "gap_title_date_pct": 1.5
+      },
+      "legal": {
+        "show_platform_legal": false,
+        "platform_legal_file": null,
+        "gap_legal_pct": 1.5,
+        "show_ad_label": true,
+        "show_our_legal": true,
+        "ad_label_scale_pct": 6.09,
+        "our_legal_scale_pct": 28.65
+      }
+    }
+  },
+  "export_templates": [
+    {
+      "name": "Соцсети только PNG",
+      "formats_include": [
+        "16x9",
+        "9x16",
+        "4x5",
+        "1x1"
+      ],
+      "export_png": true,
+      "export_psd": false,
+      "export_jpeg_for_approval": false,
+      "strip_legal": false
+    }
+  ]
+}

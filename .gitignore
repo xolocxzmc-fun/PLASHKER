@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# App working output
+/renders/
+/out/
+/export/
+*.log
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Build artifacts (создаются при сборке, в репозиторий не нужны)
+/build/
+/dist/
+/Output/
+.venv-win/
+
+# Тяжёлая папка с готовой macOS-сборкой — на GitHub не нужна
+PLASH_KER (DISTR)/

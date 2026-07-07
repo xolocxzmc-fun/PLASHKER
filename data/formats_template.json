@@ -1,0 +1,171 @@
+{
+  "16x9": {
+    "family": "social",
+    "orientation": "horizontal",
+    "size_px": [
+      1920,
+      1080
+    ],
+    "safe_zone": {
+      "source_file": "safe_zones/16x9.png",
+      "frame_rect_pct": [
+        0.0198,
+        0.0296,
+        0.9802,
+        0.9704
+      ]
+    },
+    "title_mirrored": true
+  },
+  "9x16": {
+    "family": "social",
+    "orientation": "vertical",
+    "size_px": [
+      1080,
+      1920
+    ],
+    "safe_zone": {
+      "source_file": "safe_zones/9x16.png",
+      "frame_rect_pct": [
+        0.0398,
+        0.0401,
+        0.9602,
+        0.9599
+      ]
+    },
+    "legal_layout": "vertical"
+  },
+  "4x5": {
+    "family": "social",
+    "orientation": "vertical",
+    "size_px": [
+      1080,
+      1350
+    ],
+    "safe_zone": {
+      "source_file": "safe_zones/4x5.png",
+      "frame_rect_pct": [
+        0.0296,
+        0.0296,
+        0.9704,
+        0.9704
+      ]
+    },
+    "title_mirrored": true,
+    "legal_layout": "horizontal"
+  },
+  "1x1": {
+    "family": "social",
+    "orientation": "horizontal",
+    "size_px": [
+      1080,
+      1080
+    ],
+    "safe_zone": {
+      "source_file": "safe_zones/1x1.png",
+      "frame_rect_pct": [
+        0.0296,
+        0.0296,
+        0.9704,
+        0.9704
+      ]
+    },
+    "title_mirrored": true
+  },
+  "byyd_1024x768": {
+    "family": "byyd",
+    "orientation": "horizontal",
+    "size_px": [
+      1024,
+      768
+    ],
+    "safe_zone": {
+      "source_file": "safe_zones/byyd_1024x768.png",
+      "frame_rect_pct": [
+        0.0303,
+        0.0299,
+        0.9697,
+        0.9701
+      ]
+    },
+    "supports_regions": false,
+    "title_mirrored": true
+  },
+  "byyd_768x1024": {
+    "family": "byyd",
+    "orientation": "vertical",
+    "size_px": [
+      768,
+      1024
+    ],
+    "safe_zone": {
+      "source_file": "safe_zones/byyd_768x1024.png",
+      "frame_rect_pct": [
+        0.0299,
+        0.0303,
+        0.9701,
+        0.9697
+      ]
+    },
+    "supports_regions": false,
+    "title_mirrored": true,
+    "legal_layout": "horizontal"
+  },
+  "byyd_480x320": {
+    "family": "byyd",
+    "orientation": "horizontal",
+    "size_px": [
+      480,
+      320
+    ],
+    "safe_zone": {
+      "source_file": "safe_zones/byyd_480x320.png",
+      "frame_rect_pct": [
+        0.0396,
+        0.0406,
+        0.9604,
+        0.9594
+      ]
+    },
+    "supports_regions": false,
+    "title_mirrored": true
+  },
+  "byyd_320x480": {
+    "family": "byyd",
+    "orientation": "vertical",
+    "size_px": [
+      320,
+      480
+    ],
+    "safe_zone": {
+      "source_file": "safe_zones/byyd_320x480.png",
+      "frame_rect_pct": [
+        0.0406,
+        0.0396,
+        0.9594,
+        0.9604
+      ]
+    },
+    "legal_mirrored": true,
+    "supports_regions": false,
+    "title_mirrored": true,
+    "legal_layout": "horizontal"
+  },
+  "da_1280x720": {
+    "family": "da",
+    "orientation": "horizontal",
+    "size_px": [
+      1280,
+      720
+    ],
+    "safe_zone": {
+      "source_file": "safe_zones/da_1280x720.png",
+      "frame_rect_pct": [
+        0.0297,
+        0.0306,
+        0.9703,
+        0.9694
+      ]
+    }
+  }
+}
