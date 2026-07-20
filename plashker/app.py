@@ -940,7 +940,13 @@ class Api:
         if field not in allowed:
             return {"ok": False, "error": "Неизвестное поле"}
         node = self.project.manifest["formats"][format_key]["settings"]
+        old = copy.deepcopy(node.get(field))
         node[field] = bool(value)
+        # Расширенные настройки тоже должны попадать в undo/redo (иначе на них
+        # «отменять нечего»). Формат entry совместим с _apply_history_value.
+        if node[field] != old:
+            self._push_undo({"format": format_key, "field": field,
+                             "old": old, "new": node[field]})
         return self._format_settings(format_key)
 
     def switch_region(self, region: str) -> dict:

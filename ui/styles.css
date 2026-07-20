@@ -325,14 +325,121 @@ input[type=range]::-moz-range-thumb {
 }
 .btn-secondary:hover { border-color: var(--mustard); background: var(--ink-12); }
 
-.regions { display: flex; gap: 6px; padding-bottom: 38px; }
-.region-flag {
-  font-size: 12px; font-weight: 600; letter-spacing: .5px;
-  padding: 8px 11px; border-radius: 9px;
-  border: 1px solid var(--ink-12); background: var(--surface); color: var(--ink-60);
-  cursor: pointer; transition: all .15s ease;
+/* п.7: колонка — ТВ-кнопка сверху по центру, ряд флагов под ней */
+.regions {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 7px; padding-bottom: 38px;
 }
-.region-flag.active { background: var(--marigold); color: #fff; border-color: var(--marigold); }
+.region-flags { display: flex; gap: 6px; }
+.region-flag {
+  width: 40px; height: 28px; padding: 0; overflow: hidden;
+  border-radius: 7px; border: 1px solid var(--ink-12);
+  background: var(--surface); color: var(--ink-60);
+  cursor: pointer; transition: all .15s ease;
+  display: grid; place-items: center;
+  opacity: .62; filter: saturate(.85);
+}
+.region-flag svg { width: 100%; height: 100%; display: block; }
+.region-flag .region-code { font-size: 12px; font-weight: 600; letter-spacing: .5px; }
+.region-flag:hover { opacity: .9; }
+.region-flag.active {
+  opacity: 1; filter: none;
+  border-color: var(--marigold);
+  box-shadow: 0 0 0 2px var(--marigold);
+}
+
+/* п.7: ТВ-кнопка (функция в разработке) + подсказка на hover */
+.tv-btn {
+  position: relative;
+  width: 34px; height: 26px; padding: 0;
+  display: grid; place-items: center;
+  border: 1px dashed var(--ink-12); border-radius: 7px;
+  background: transparent; color: var(--ink-60);
+  cursor: help; transition: color .15s ease, border-color .15s ease;
+}
+.tv-btn svg { width: 20px; height: 20px; display: block; }
+.tv-btn:hover { color: var(--mustard); border-color: var(--mustard); }
+.tv-btn::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%);
+  white-space: nowrap; padding: 5px 9px; border-radius: 7px;
+  background: var(--ink); color: var(--surface);
+  font-size: 10.5px; font-weight: 700; letter-spacing: .4px;
+  opacity: 0; pointer-events: none; transition: opacity .15s ease;
+  z-index: 40;
+}
+.tv-btn::before {
+  content: ""; position: absolute; bottom: calc(100% + 2px); left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--ink);
+  opacity: 0; pointer-events: none; transition: opacity .15s ease; z-index: 40;
+}
+.tv-btn:hover::after, .tv-btn:hover::before { opacity: 1; }
+
+/* п.2: полноэкранная зона дропа (экран создания). Визуальный оверлей,
+   pointer-events:none — логику дропа держит обработчик на #create. Большая
+   пунктирная рамка по всему экрану ясно показывает: бросать можно куда угодно. */
+.fullscreen-drop {
+  position: fixed; inset: 0; z-index: 60;
+  display: none; place-items: center;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--marigold) 12%, var(--bg) 88%);
+  backdrop-filter: blur(3px) saturate(1.03);
+}
+.fullscreen-drop.show { display: grid; animation: fsd-in .14s ease-out; }
+@keyframes fsd-in { from { opacity: 0; } to { opacity: 1; } }
+/* рамка на всю зону */
+.fullscreen-drop::before {
+  content: ""; position: fixed; inset: 16px;
+  border: 3px dashed color-mix(in srgb, var(--marigold) 62%, transparent);
+  border-radius: 22px;
+  animation: fsd-frame 1.6s ease-in-out infinite;
+}
+@keyframes fsd-frame {
+  0%,100% { border-color: color-mix(in srgb, var(--marigold) 45%, transparent); }
+  50%     { border-color: color-mix(in srgb, var(--marigold) 80%, transparent); }
+}
+.fullscreen-drop .fsd-inner {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 40px 62px; border-radius: 22px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 22px 64px rgba(43,33,24,.28), inset 0 0 0 1px rgba(255,255,255,.4);
+}
+.fullscreen-drop .fsd-icon { color: var(--marigold); animation: al-bob 1.2s ease-in-out infinite; }
+.fullscreen-drop .fsd-title { font-size: 23px; font-weight: 800; letter-spacing: .3px; }
+.fullscreen-drop .fsd-sub { font-size: 13px; color: var(--ink-60); }
+
+/* п.1: оверлей загрузки проекта */
+.app-loader {
+  position: fixed; inset: 0; z-index: 90;
+  display: none; place-items: center;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  backdrop-filter: blur(3px);
+}
+.app-loader.show { display: grid; animation: fsd-in .12s ease-out; }
+.app-loader .al-inner {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.app-loader .al-mascot { color: var(--marigold); }
+.app-loader .al-mascot svg { display: block; animation: al-bob 1.1s ease-in-out infinite; }
+.app-loader .al-mascot .al-arm-l { transform-origin: 37px 56px; animation: al-wave-l 1.1s ease-in-out infinite; }
+.app-loader .al-mascot .al-arm-r { transform-origin: 83px 56px; animation: al-wave-r 1.1s ease-in-out infinite; }
+.app-loader .al-title { font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: .3px; }
+.app-loader .al-bar {
+  width: 168px; height: 5px; border-radius: 3px;
+  background: var(--ink-12); overflow: hidden;
+}
+.app-loader .al-bar span {
+  display: block; height: 100%; width: 40%; border-radius: 3px;
+  background: var(--marigold);
+  animation: al-slide 1.05s ease-in-out infinite;
+}
+@keyframes al-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes al-wave-l { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-14deg); } }
+@keyframes al-wave-r { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(14deg); } }
+@keyframes al-slide { 0% { transform: translateX(-120%); } 100% { transform: translateX(320%); } }
 
 /* запас снизу, чтобы тень карточек и подпись не обрезались скроллом (п.3) */
 .cards-scroll { flex: 1; min-width: 0; overflow-x: auto; overflow-y: hidden; }
@@ -659,13 +766,22 @@ input[type=range]::-moz-range-thumb {
   position: fixed; inset: 0; z-index: 100;
   display: flex; align-items: center; justify-content: center;
   pointer-events: none;
-  /* фон — тот же, что и у окна экспорта (п.4) */
-  background: rgba(43, 33, 24, .55);
-  animation: ecBackdropIn .3s ease both;
+  /* тёплый светлый ореол вместо тёмной заливки — празднично и не «чёрно» */
+  background:
+    radial-gradient(circle at 50% 44%,
+      color-mix(in srgb, var(--marigold) 26%, transparent) 0%,
+      color-mix(in srgb, var(--marigold) 8%, transparent) 34%,
+      color-mix(in srgb, var(--bg) 55%, transparent) 68%);
+  backdrop-filter: blur(4px) saturate(1.06);
+  animation: ecBackdropIn .32s ease both;
 }
-@keyframes ecBackdropIn { from { background: rgba(43,33,24,0); } to { background: rgba(43,33,24,.55); } }
+@keyframes ecBackdropIn { from { opacity: 0; } to { opacity: 1; } }
 .export-celebration .ec-content {
-  display: flex; flex-direction: column; align-items: center; gap: 22px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  padding: 42px 60px 34px;
+  border-radius: 26px;
+  background: var(--surface);
+  box-shadow: 0 26px 72px rgba(43,33,24,.30), inset 0 0 0 1px rgba(255,255,255,.45);
   animation: celebrationIn .6s cubic-bezier(.18,1.1,.3,1.15) both;
   z-index: 2;
 }
@@ -683,12 +799,12 @@ input[type=range]::-moz-range-thumb {
   animation: checkDraw .55s .35s cubic-bezier(.6,0,.2,1) forwards;
 }
 .export-celebration .ec-label {
-  font-family: var(--serif); font-size: 34px; font-weight: 800;
-  color: #fff; letter-spacing: .4px; text-shadow: 0 2px 14px rgba(0,0,0,.3);
+  font-family: var(--serif); font-size: 32px; font-weight: 800;
+  color: var(--ink); letter-spacing: .3px;
   animation: celebrationIn .55s .28s cubic-bezier(.18,1.1,.3,1.15) both;
 }
 .export-celebration .ec-sub {
-  font-size: 16px; color: rgba(255,255,255,.85); font-weight: 500;
+  font-size: 15.5px; color: var(--ink-60); font-weight: 500;
   animation: celebrationIn .55s .42s cubic-bezier(.18,1.1,.3,1.15) both;
 }
 .export-celebration .ec-sparkles {
@@ -697,7 +813,7 @@ input[type=range]::-moz-range-thumb {
 .export-celebration .ec-sparkle {
   position: absolute; width: 8px; height: 8px; border-radius: 2px;
   animation: sparkle 1.9s cubic-bezier(.1,.7,.3,1) both;
-  box-shadow: 0 0 8px rgba(255,255,255,.4);
+  box-shadow: 0 2px 6px rgba(43,33,24,.22);
 }
 @keyframes celebrationIn {
   from { opacity: 0; transform: translateY(26px) scale(.7); }
@@ -836,6 +952,12 @@ input[type=range]::-moz-range-thumb {
 }
 .info-btn { font-size: 16px; }
 .info-btn svg { display: block; }
+/* п.6: кнопка сохранения в топбаре (слева от «i») */
+.save-btn svg { display: block; }
+.save-btn:hover { color: var(--mustard); }
+.save-btn.busy { opacity: .55; pointer-events: none; }
+.save-btn.busy svg { animation: save-pulse .8s ease-in-out infinite; }
+@keyframes save-pulse { 0%,100% { opacity: .4; } 50% { opacity: 1; } }
 
 /* ===== модалка «сохранить перед выходом» ================================ */
 .modal-exit { width: 400px; }
@@ -1129,6 +1251,8 @@ input[type=checkbox]:not(.switch):checked::after {
 .rs-drop-remove { pointer-events: auto; }
 .opt-row.disabled { opacity: .48; cursor: not-allowed; }
 .opt-row.disabled .switch { cursor: not-allowed; }
+/* мелкая подпись у названия опции (напр. «PSD — со смарт-объектами») */
+.opt-note { font-size: 10.5px; font-weight: 500; color: var(--ink-60); margin-left: 7px; }
 
 
 /* v17: окно «Заменить» — ровная сетка без пустой правой зоны, +15% и центрирование */
@@ -1590,24 +1714,34 @@ img.midlight-asset {
 
 /* --- финал экспорта: оттиск резинового штампа --------------------------- */
 .export-celebration .ec-ring {
-  background: transparent; border-radius: 16px;
-  border: 4px solid var(--marigold);
-  box-shadow: inset 0 0 0 3px var(--marigold), 0 10px 30px rgba(0,0,0,.30);
-  transform: rotate(-9deg);
-  animation: stampThunk .55s cubic-bezier(.2,.7,.3,1.5) both;
+  width: 132px; height: 132px; border-radius: 50%;
+  /* совпадает с кнопкой «Экспорт» (--cta), которую только что нажали */
+  background: radial-gradient(circle at 50% 32%, var(--cta) 0%, var(--cta-dark) 100%);
+  border: none;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--cta) 48%, transparent),
+              0 0 0 10px color-mix(in srgb, var(--cta) 15%, transparent);
+  transform: none;
+  animation: badgePop .66s cubic-bezier(.2,.8,.3,1.5) both,
+             ctaPulse 1.9s .5s ease-out 2 both;
 }
-.export-celebration .ec-ring svg { color: var(--marigold); }
-@keyframes stampThunk {
-  0%   { opacity: 0; transform: rotate(-9deg) scale(1.8); }
-  55%  { opacity: 1; transform: rotate(-9deg) scale(.92); }
-  100% { opacity: 1; transform: rotate(-9deg) scale(1); }
+.export-celebration .ec-ring svg { width: 74px; height: 74px; color: var(--on-cta); }
+@keyframes badgePop {
+  0%   { opacity: 0; transform: scale(.3); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes ctaPulse {
+  0%   { box-shadow: 0 16px 40px color-mix(in srgb, var(--cta) 48%, transparent),
+                     0 0 0 0 color-mix(in srgb, var(--cta) 40%, transparent); }
+  100% { box-shadow: 0 16px 40px color-mix(in srgb, var(--cta) 0%, transparent),
+                     0 0 0 46px color-mix(in srgb, var(--cta) 0%, transparent); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .recent-item, .intro .actions > button, .credit-line,
   .switch:checked::after, .export-celebration .ec-ring { animation: none !important; }
   .credit-line { transform: translateX(-50%) rotate(-3deg); }
-  .export-celebration .ec-ring { transform: rotate(-9deg); }
+  .export-celebration .ec-ring { transform: none; }
 }
 
 

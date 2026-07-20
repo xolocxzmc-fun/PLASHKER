@@ -5,6 +5,27 @@
 
 const api = () => window.pywebview && window.pywebview.api;
 
+/* ---- определение ОС (п.5) ----------------------------------------------
+   Нужно, чтобы: (а) в подсказках показывать ⌘ на macOS и Ctrl на Windows;
+   (б) шорткаты ловились по ФИЗИЧЕСКОЙ клавише (e.code === "KeyS"), а не по
+   символу (e.key), иначе на русской раскладке Windows Ctrl+S не срабатывает —
+   физическая S там даёт «ы». */
+const IS_MAC = (() => {
+  const p = (navigator.userAgentData && navigator.userAgentData.platform) ||
+            navigator.platform || navigator.userAgent || "";
+  return /mac|iphone|ipad|ipod/i.test(p);
+})();
+const MOD_LABEL = IS_MAC ? "⌘" : "Ctrl";
+const SHIFT_LABEL = IS_MAC ? "⇧" : "Shift";
+
+/* Заменить в подсказках символы модификаторов на актуальные для ОС. */
+function applyOSHotkeyLabels() {
+  document.querySelectorAll("kbd.kbd-mod").forEach(k => { k.textContent = MOD_LABEL; });
+  document.querySelectorAll("kbd.kbd-shift").forEach(k => { k.textContent = SHIFT_LABEL; });
+  const saveBtn = document.getElementById("btn-save");
+  if (saveBtn) saveBtn.title = `Сохранить проект (${MOD_LABEL}+S)`;
+}
+
 let STATE = null;
 let CURRENT = null;
 let BOUNDS = {};
@@ -185,10 +206,15 @@ setTimeout(() => { if (!api()) standaloneNotice(); }, 900);
 
 async function initBridge() {
   await loadTheme();
-  $("#btn-demo").onclick = async () => { await boot(await api().open_demo()); };
+  $("#btn-demo").onclick = async () => {
+    await withLoader("Открываю демо-проект…", async () => { await boot(await api().open_demo()); });
+  };
   $("#btn-open").onclick = async () => {
+    // диалог выбора файла открывается ДО лоадера (нативное окно поверх), а
+    // распаковку и рендер уже накрываем оверлеем.
     const st = await api().open_project_dialog?.();
     if (st && st.loaded) await boot(st);
+    else if (st === null || st === undefined) { /* отмена диалога — без шума */ }
   };
   $("#btn-new").onclick = openCreateScreen;
   await loadRecents();
@@ -219,8 +245,10 @@ async function loadRecents() {
     g.innerHTML = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4h14M3 4v12a2 2 0 002 2h10a2 2 0 002-2V4M7 4V2h6v2"/></svg>`;
     it.append(left, g);
     it.onclick = async () => {
-      const st = await api().open_project(r.path);
-      if (st && st.loaded) await boot(st); else toast("Файл не найден");
+      await withLoader("Открываю проект…", async () => {
+        const st = await api().open_project(r.path);
+        if (st && st.loaded) await boot(st); else toast("Файл не найден");
+      });
       await loadRecents();
     };
     list.appendChild(it);
@@ -269,38 +297,33 @@ function wireCreateScreen() {
     input.type = "file"; input.accept = "image/png"; input.multiple = true; input.style.display = "none";
     card.appendChild(input);
     card.onclick = () => input.click();
-    input.onchange = () => { if (input.files?.length) handleCreateFiles(kind, input.files, card); };
+    input.onchange = () => { if (input.files?.length) enqueueImport(() => handleCreateFiles(kind, input.files, card)); };
 
     card.addEventListener("dragover", e => { e.preventDefault(); card.classList.add("drag"); });
     card.addEventListener("dragleave", () => card.classList.remove("drag"));
     card.addEventListener("drop", async e => {
-      e.preventDefault(); card.classList.remove("drag");
+      e.preventDefault(); e.stopPropagation(); card.classList.remove("drag");
       const files = e.dataTransfer.files;
-      if (files && files.length) handleCreateFiles(kind, files, card);
+      if (files && files.length) enqueueImport(() => handleCreateFiles(kind, files, card));
     });
   });
 
-  const createBox = document.querySelector("#create .create-box");
-  if (createBox && !createBox.dataset.autoImportWired) {
-    createBox.dataset.autoImportWired = "1";
-    createBox.addEventListener("dragover", e => { e.preventDefault(); });
-    createBox.addEventListener("drop", e => {
-      if (e.target.closest(".drop-card")) return;
-      e.preventDefault();
-      const files = e.dataTransfer.files;
-      if (files && files.length) handleAutoImportFiles(files);
-    });
-  }
+  wireFullscreenDrop();
 
   $("#create-enter").onclick = async () => {
     const title = $("#new-title").value.trim();
     if (!title) { toast("Введите название проекта"); return; }
-    // создаём проект и импортируем кэшированные файлы
-    if (!projectCreated) { await api().new_project(title); projectCreated = true; }
-    await flushAllCached();
-    const st = await api().enter_editor();
-    if (st && st.loaded) await boot(st);
-    else toast(st?.error || "Не удалось открыть редактор");
+    await withLoader("Собираю проект…", async () => {
+      // ждём, пока докачаются все файлы из пачки (иначе часть могла ещё
+      // кешироваться и не попала бы в проект, п.2)
+      await _importQueue;
+      // создаём проект и импортируем кэшированные файлы
+      if (!projectCreated) { await api().new_project(title); projectCreated = true; }
+      await flushAllCached();
+      const st = await api().enter_editor();
+      if (st && st.loaded) await boot(st);
+      else toast(st?.error || "Не удалось открыть редактор");
+    });
   };
 
   // пересчитываем готовность при изменении имени
@@ -309,6 +332,60 @@ function wireCreateScreen() {
 
 let projectCreated = false;
 const importCache = {}; // kind → {file, dataUrl, card}
+
+/* Очередь импорта (п.2): все дропы прогоняем строго последовательно, а кнопка
+   «Создать проект» ждёт её завершения — так ни один файл из пачки не теряется
+   в гонке с созданием проекта. */
+let _importQueue = Promise.resolve();
+function enqueueImport(fn) {
+  _importQueue = _importQueue.then(fn).catch(err => console.error("Plashker import:", err));
+  return _importQueue;
+}
+
+/* п.2: полноэкранная зона дропа на экране создания. При перетаскивании файлов
+   любую точку экрана можно использовать как приёмник — удобно, когда кидаешь
+   сразу пачку. Оверлей чисто визуальный (pointer-events:none): реальную логику
+   дропа держит обработчик на window, а точечный дроп на конкретную карточку
+   по-прежнему работает (карточка гасит всплытие). */
+let _fsdWired = false;
+let _fsDragDepth = 0;
+function _showFullDrop(on) {
+  const el = document.getElementById("create-fulldrop");
+  if (el) el.classList.toggle("show", !!on);
+}
+/* Вешаем прямо на экран #create (а не на window): в WKWebView события drag на
+   window ненадёжны, из-за чего оверлей на всю зону не показывался (п.2). Оверлей
+   чисто визуальный (pointer-events:none), логику дропа держит #create; точечный
+   дроп на карточку обрабатывается ею самой (stopPropagation). */
+function wireFullscreenDrop() {
+  if (_fsdWired) return;
+  const zone = document.getElementById("create");
+  if (!zone) return;
+  _fsdWired = true;
+
+  zone.addEventListener("dragenter", e => {
+    e.preventDefault();
+    _fsDragDepth++;
+    _showFullDrop(true);
+  });
+  zone.addEventListener("dragover", e => {
+    e.preventDefault();                       // обязательно, иначе drop не сработает
+    if (e.dataTransfer) { try { e.dataTransfer.dropEffect = "copy"; } catch (_) {} }
+    _showFullDrop(true);
+  });
+  zone.addEventListener("dragleave", e => {
+    _fsDragDepth = Math.max(0, _fsDragDepth - 1);
+    if (_fsDragDepth === 0) _showFullDrop(false);
+  });
+  zone.addEventListener("drop", e => {
+    e.preventDefault();
+    _fsDragDepth = 0; _showFullDrop(false);
+    // точечный дроп на карточку она обрабатывает сама (stopPropagation)
+    if (e.target && e.target.closest && e.target.closest(".drop-card")) return;
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length) enqueueImport(() => handleAutoImportFiles(files));
+  });
+}
 
 const CREATE_KIND_TITLES = {
   title: "Тайтл",
@@ -367,43 +444,90 @@ function tagMatches(norm, tag) {
   return compactHay.includes(compactNeedle);
 }
 
-function classifyAssetFile(file) {
+/* Все подходящие типы для файла: {kind: score}. Возвращаем НЕ только лучший,
+   чтобы при коллизии (два файла метят в один слот) второй мог занять свой
+   следующий по силе свободный слот, а не пропасть (п.2). */
+function scoreAssetFile(file) {
   const norm = normalizeAssetName(file?.name || "");
-  let best = null;
+  const scores = {};
   for (const group of AUTO_TAGS) {
     for (const tag of group.tags) {
       if (tagMatches(norm, tag)) {
         const score = group.weight + normalizeAssetName(tag).length / 100;
-        if (!best || score > best.score) best = { kind: group.kind, score, tag };
+        if (!(group.kind in scores) || score > scores[group.kind]) scores[group.kind] = score;
       }
     }
+  }
+  return scores;
+}
+
+/* Обратная совместимость: лучший единственный тип для файла. */
+function classifyAssetFile(file) {
+  const scores = scoreAssetFile(file);
+  let best = null;
+  for (const [kind, score] of Object.entries(scores)) {
+    if (!best || score > best.score) best = { kind, score };
   }
   return best;
 }
 
+/* Жадное глобальное назначение файлов по слотам: каждый файл → максимум один
+   слот, каждый слот → максимум один файл, суммарно по убыванию уверенности.
+   Гарантирует, что ни один распознаваемый файл не теряется из-за того, что его
+   «лучший» слот занял другой файл — он опускается на следующий свободный (п.2). */
+function assignAssetFiles(arr) {
+  const cands = [];
+  arr.forEach((file, fi) => {
+    const scores = scoreAssetFile(file);
+    for (const [kind, score] of Object.entries(scores)) cands.push({ fi, kind, score });
+  });
+  cands.sort((a, b) => b.score - a.score);
+  const usedFile = new Set(), usedKind = new Set();
+  const chosen = {};                 // kind -> file
+  for (const c of cands) {
+    if (usedFile.has(c.fi) || usedKind.has(c.kind)) continue;
+    chosen[c.kind] = arr[c.fi];
+    usedFile.add(c.fi); usedKind.add(c.kind);
+  }
+  const unassigned = arr.filter((_f, i) => !usedFile.has(i));
+  return { chosen, unassigned };
+}
+
 async function handleAutoImportFiles(files) {
   const arr = [...(files || [])].filter(f => /^image\/png$/i.test(f.type || "") || /\.png$/i.test(f.name || ""));
+  const rejected = [...(files || [])].length - arr.length;
   if (!arr.length) { toast("Нужны PNG-файлы"); return; }
-  const chosen = {};
-  const unknown = [];
-  for (const file of arr) {
-    const hit = classifyAssetFile(file);
-    if (!hit) { unknown.push(file.name); continue; }
-    const prev = chosen[hit.kind];
-    if (!prev || hit.score > prev.hit.score) chosen[hit.kind] = { file, hit };
+
+  const { chosen, unassigned } = assignAssetFiles(arr);
+
+  // Добор (п.2): файлы, которые не распознались по имени (например, тайтл
+  // назван по имени фильма), НЕ теряем — раскладываем по пустым ОБЯЗАТЕЛЬНЫМ
+  // зонам в порядке title → date → rating. Именно из-за этого «1 элемент
+  // пропадал при импорте пачки».
+  const leftover = [...unassigned];
+  const filled = [];
+  for (const kind of ["title", "date", "rating"]) {
+    if (chosen[kind] || imported[kind]) continue;
+    if (!leftover.length) break;
+    chosen[kind] = leftover.shift();
+    filled.push(kind);
   }
+
   const entries = Object.entries(chosen);
-  if (!entries.length) {
-    toast("Не удалось распознать материалы по названиям файлов");
-    return;
-  }
-  for (const [kind, item] of entries) {
+  if (!entries.length) { toast("Не удалось распознать материалы"); return; }
+  // импортируем последовательно, чтобы не гонять создание проекта в параллель
+  for (const [kind, file] of entries) {
     const card = document.querySelector(`.drop-card[data-kind="${kind}"]`);
-    if (card) await handleImport(kind, item.file, card);
+    if (card) await handleImport(kind, file, card);
   }
+
   const names = entries.map(([kind]) => CREATE_KIND_TITLES[kind] || kind).join(", ");
-  toast(`Автораспознано: ${names}`);
-  if (unknown.length) console.warn("Plashker auto-import: unknown files", unknown);
+  let msg = `Разложено: ${names}`;
+  if (filled.length) msg += " · файлы без узнаваемого имени — по свободным зонам, проверьте";
+  if (leftover.length) msg += ` · ${leftover.length} не размещены (перетащите вручную)`;
+  if (rejected > 0) msg += ` · пропущено не-PNG: ${rejected}`;
+  if (leftover.length) console.warn("Plashker auto-import: не размещены", leftover.map(f => f.name));
+  toast(msg);
 }
 
 async function handleCreateFiles(kind, files, card) {
@@ -422,13 +546,15 @@ async function ensureProject() {
 async function handleImport(kind, file, card) {
   card.classList.add("drag");
   const dataUrl = await readFileAsDataURL(file);
+
+  // кэшируем оригинал СРАЗУ — до генерации превью и до возможного клика
+  // «Создать проект». Иначе при быстром клике по пачке файл, чьё превью ещё
+  // считается, не попадал в кэш и терялся (п.2).
+  importCache[kind] = { file, dataUrl };
+  imported[kind] = true;
+
   const thumbUrl = await makeVisibleThumbDataURL(dataUrl, 260);
   card.classList.remove("drag");
-
-  // кэшируем оригинал — если проект ещё не создан, импорт произойдёт при нажатии «Создать»
-  importCache[kind] = { file, dataUrl };
-
-  imported[kind] = true;
   card.classList.add("filled");
   $("[data-state]", card).textContent = "";
   const old = $(".drop-thumb", card); if (old) old.remove();
@@ -515,20 +641,48 @@ function validateCreateReady() {
 /* ===========================================================================
    ЗАГРУЗКА РЕДАКТОРА
    =========================================================================== */
+/* п.1: оверлей загрузки. Показываем МГНОВЕННО при клике «Открыть», чтобы не
+   было ощущения зависания на время распаковки .plshk и первого рендера. */
+function showLoader(text) {
+  const el = document.getElementById("app-loader");
+  if (!el) return;
+  const t = document.getElementById("app-loader-title");
+  if (t && text) t.textContent = text;
+  el.classList.add("show");
+}
+function hideLoader() {
+  const el = document.getElementById("app-loader");
+  if (el) el.classList.remove("show");
+}
+/* Обёртка: гарантированно показать лоадер на время открытия и скрыть в конце,
+   даже если что-то упало. Уступаем один кадр, чтобы оверлей успел отрисоваться
+   до тяжёлой синхронной работы. */
+async function withLoader(text, fn) {
+  showLoader(text);
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  try { return await fn(); }
+  finally { hideLoader(); }
+}
+
 async function boot(state) {
   STATE = state;
-  if (!state || !state.loaded) { toast("Не удалось открыть проект"); return; }
-  $("#welcome").style.display = "none";
-  $("#create").style.display = "none";
-  $("#app").style.display = "grid";
-  $("#movie-chip").textContent = state.movie_title;
-  projectCreated = false;
-  sessionCalibrated = false;  // сброс авто-пропагации
-  SOLO = null; SAVED_VIS = null;
+  if (!state || !state.loaded) { hideLoader(); toast("Не удалось открыть проект"); return; }
+  showLoader("Открываю проект…");
+  try {
+    $("#welcome").style.display = "none";
+    $("#create").style.display = "none";
+    $("#app").style.display = "grid";
+    $("#movie-chip").textContent = state.movie_title;
+    projectCreated = false;
+    sessionCalibrated = false;  // сброс авто-пропагации
+    SOLO = null; SAVED_VIS = null;
 
-  buildRegions();
-  buildCards();
-  await selectFormat(state.current_format);
+    buildRegions();
+    buildCards();
+    await selectFormat(state.current_format);
+  } finally {
+    hideLoader();
+  }
   prefetchOthers();
 }
 
@@ -542,12 +696,39 @@ function exitToWelcome() {
   loadRecents();
 }
 
+/* п.7: SVG-флаги регионов (эмодзи-флаги не рендерятся на Windows, поэтому
+   рисуем инлайновым SVG). preserveAspectRatio=none — заливаем всю кнопку,
+   скругление даёт .region-flag { overflow:hidden }. */
+const FLAG_SVG = {
+  RU: `<svg viewBox="0 0 30 20" preserveAspectRatio="none" aria-hidden="true"><rect width="30" height="20" fill="#fff"/><rect y="6.67" width="30" height="13.33" fill="#0039A6"/><rect y="13.33" width="30" height="6.67" fill="#D52B1E"/></svg>`,
+  KZ: `<svg viewBox="0 0 30 20" preserveAspectRatio="none" aria-hidden="true"><rect width="30" height="20" fill="#00AFCA"/><circle cx="15" cy="8.5" r="3.1" fill="#FEC50C"/><path d="M10.5 15c1-1.6 2.7-2.4 4.5-2.4s3.5.8 4.5 2.4" fill="none" stroke="#FEC50C" stroke-width="1.1" stroke-linecap="round"/></svg>`,
+  BY: `<svg viewBox="0 0 30 20" preserveAspectRatio="none" aria-hidden="true"><rect width="30" height="20" fill="#D22730"/><rect y="13.5" width="30" height="6.5" fill="#009543"/><rect width="6" height="20" fill="#fff"/><g fill="#D22730"><rect x="1.6" y="2.2" width="1.1" height="1.1"/><rect x="3.3" y="2.2" width="1.1" height="1.1"/><rect x="2.45" y="4" width="1.1" height="1.1"/><rect x="1.6" y="5.8" width="1.1" height="1.1"/><rect x="3.3" y="5.8" width="1.1" height="1.1"/><rect x="2.45" y="7.6" width="1.1" height="1.1"/></g></svg>`,
+};
+const REGION_NAME = { RU: "Россия", KZ: "Казахстан", BY: "Беларусь" };
+
 function buildRegions() {
   const wrap = $("#regions"); wrap.innerHTML = "";
+
+  // п.7: ТВ-кнопка над регионами, по центру. Функция в разработке —
+  // при наведении показываем мини-подсказку «ТВ-ПЛАШКИ В РАЗРАБОТКЕ».
+  const tv = document.createElement("button");
+  tv.type = "button";
+  tv.className = "tv-btn";
+  tv.setAttribute("data-tip", "ТВ-ПЛАШКИ В РАЗРАБОТКЕ");
+  tv.setAttribute("aria-label", "ТВ-плашки (в разработке)");
+  tv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="12" rx="2"/><path d="M8 3l4 4 4-4"/><path d="M9 22h6"/></svg>`;
+  tv.onclick = (e) => { e.preventDefault(); toast("ТВ-плашки в разработке"); };
+  wrap.appendChild(tv);
+
+  const row = document.createElement("div");
+  row.className = "region-flags";
   STATE.regions.forEach(r => {
     const b = document.createElement("button");
+    b.type = "button";
     b.className = "region-flag" + (r === STATE.current_region ? " active" : "");
-    b.textContent = r;
+    b.title = REGION_NAME[r] || r;
+    b.setAttribute("aria-label", REGION_NAME[r] || r);
+    b.innerHTML = FLAG_SVG[r] || `<span class="region-code">${r}</span>`;
     b.onclick = async () => {
       STATE = await api().switch_region(r);
       buildRegions(); buildCards(); invalidateCache();
@@ -558,8 +739,9 @@ function buildRegions() {
         if (!hasKzDate) toast("Пожалуйста, загрузите дату для Казахстана");
       }
     };
-    wrap.appendChild(b);
+    row.appendChild(b);
   });
+  wrap.appendChild(row);
 }
 
 function buildCards() {
@@ -1433,6 +1615,10 @@ function wireStaticUI() {
   const welcomeSettings = $("#btn-app-settings-welcome");
   if (welcomeSettings) welcomeSettings.onclick = openAppSettings;
   $("#btn-hotkeys").onclick = () => $("#modal-hotkeys").classList.add("open");
+  // п.6: кнопка сохранения в топбаре — тот же путь, что и ⌘/Ctrl+S
+  const saveBtn = $("#btn-save");
+  if (saveBtn) saveBtn.onclick = () => saveCurrentProject();
+  applyOSHotkeyLabels();
   $all(".theme-choice").forEach(btn => {
     btn.onclick = (e) => { e.stopPropagation(); setTheme(btn.dataset.themeChoice); };
   });
@@ -1451,6 +1637,26 @@ function wireStaticUI() {
   }));
 
   document.addEventListener("keydown", onKeydown);
+}
+
+/* Единая точка сохранения: и кнопка в топбаре (п.6), и ⌘/Ctrl+S (п.5).
+   Работает в любой момент, пока открыт редактор (в т.ч. при открытых
+   модалках). Если проект новый — save_current сам откроет диалог «Сохранить как». */
+async function saveCurrentProject() {
+  const inEditor = $("#app").style.display !== "none";
+  if (!inEditor || !api()?.save_current) return null;
+  const btn = $("#btn-save");
+  if (btn) btn.classList.add("busy");
+  try {
+    const path = await api().save_current();
+    toast(path ? "Проект сохранён" : "Сохранение отменено");
+    return path;
+  } catch (err) {
+    toast("Не удалось сохранить проект");
+    return null;
+  } finally {
+    if (btn) btn.classList.remove("busy");
+  }
 }
 
 /* ---- горячие клавиши (п.10 CMD+S, п.11 стрелки) ------------------------- */
@@ -1475,20 +1681,26 @@ async function onKeydown(e) {
   }
 
   // CMD/CTRL+S — сохранить (п.10); +Shift = «Сохранить как» (п.7 v0.8)
-  if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
+  // Ловим по e.code (физическая клавиша), чтобы работало на любой раскладке —
+  // на русской раскладке Windows e.key для этой клавиши = «ы», не «s» (п.5).
+  const isKeyS = e.code === "KeyS" || e.key === "s" || e.key === "S" ||
+                 e.key === "ы" || e.key === "Ы";
+  if ((e.metaKey || e.ctrlKey) && isKeyS) {
     e.preventDefault();
-    if (!inEditor || !api()?.save_current) return;
     if (e.shiftKey) {
-      const path = await api().save_as?.();
+      if (!inEditor || !api()?.save_as) return;
+      const path = await api().save_as();
       toast(path ? `Дубликат сохранён: ${path}` : "Сохранение отменено");
     } else {
-      const path = await api().save_current();
-      toast(path ? "Проект сохранён" : "Сохранение отменено");
+      await saveCurrentProject();
     }
     return;
   }
-  // CMD/CTRL+Z и CMD/CTRL+SHIFT+Z — undo/redo только для редактирования
-  if ((e.metaKey || e.ctrlKey) && !typing && !anyModalOpen() && (e.key === "z" || e.key === "Z")) {
+  // CMD/CTRL+Z и CMD/CTRL+SHIFT+Z — undo/redo только для редактирования.
+  // Тоже по e.code — на русской раскладке физическая Z = «я» (п.5).
+  const isKeyZ = e.code === "KeyZ" || e.key === "z" || e.key === "Z" ||
+                 e.key === "я" || e.key === "Я";
+  if ((e.metaKey || e.ctrlKey) && !typing && !anyModalOpen() && isKeyZ) {
     e.preventDefault();
     if (!inEditor) return;
     await applyHistory(e.shiftKey ? "redo" : "undo");
@@ -1640,10 +1852,19 @@ async function openExportModal() {
   if (nowCb) { nowCb.disabled = !hasNow; nowCb.checked = hasNow; }
   if (nowRow) { nowRow.classList.toggle("disabled", !hasNow); nowRow.title = hasNow ? "" : "Сначала загрузите картинку «Уже в кино»"; }
 
-  const hasPlatform = !!(await api().has_platform_legal?.());
+  // Доступность площадки берём из ДВУХ источников: глобальная проверка по всем
+  // форматам + платформенный файл текущего формата из уже загруженных настроек.
+  // Так тумблер не блокируется по ошибке, если один из сигналов подвис.
+  let hasPlatform = !!(await api().has_platform_legal?.());
+  if (!hasPlatform && LAST_SETTINGS && LAST_SETTINGS.legal && LAST_SETTINGS.legal.platform_legal_file) {
+    hasPlatform = true;
+  }
   const platformCb = $("#exp-platform");
   const platformRow = $("#exp-platform-row");
-  if (platformCb) { platformCb.disabled = !hasPlatform; platformCb.checked = hasPlatform; }
+  if (platformCb) {
+    platformCb.disabled = !hasPlatform;
+    if (!hasPlatform) platformCb.checked = false;   // не форсим включение — пусть решает пользователь
+  }
   if (platformRow) { platformRow.classList.toggle("disabled", !hasPlatform); platformRow.title = hasPlatform ? "" : "Сначала загрузите юр.информацию площадки"; }
 
   syncToggleAllLabel();
@@ -1701,7 +1922,8 @@ function showExportCelebration(count, dir) {
   el.className = "export-celebration";
   // sparkles — много, крупные, разлетаются широко и вращаются
   const sparkles = document.createElement("div"); sparkles.className = "ec-sparkles";
-  const colors = ["#F2A53C", "#D98E2B", "#C8453C", "#FBF3E3", "#fff"];
+  // насыщенные тёплые + один акцентный бирюзовый — хорошо видны на светлой карточке
+  const colors = ["#F2A53C", "#D98E2B", "#C8453C", "#E86A3A", "#2FAE8F"];
   const N = 48;
   for (let i = 0; i < N; i++) {
     const s = document.createElement("div"); s.className = "ec-sparkle";

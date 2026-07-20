@@ -372,6 +372,27 @@ def export_subdir(format_key: str, family: str, region: str) -> str:
     return _format_dir_name(format_key)
 
 
+def _legal_present(ctx: RenderContext) -> bool:
+    """Есть ли в «полном» рендере хоть какой-то юридический контент.
+
+    Если нет (KZ — п.3; либо все юр.флаги выключены / нет ассетов — п.8), то
+    «полная» и «clean» (без юр.инфо) версии выходят байт-в-байт одинаковыми,
+    и второй PNG — бессмысленный дубль. Логика зеркалит _render_legal(), чтобы
+    решение точно совпадало с тем, что реально рисуется на холст.
+    """
+    legal = ctx.pf.legal
+    g = ctx.globals_
+    platform = bool(legal.show_platform_legal and legal.platform_legal_file)
+    if ctx.fmt.legal_is_vertical:
+        combined = bool(legal.show_ad_and_legal_combined and g.ad_and_legal_combined_v)
+        return combined or platform
+    show_ad = bool((legal.show_ad_label or legal.show_ad_and_legal_combined)
+                   and g.ad_label_h)
+    show_our = bool((legal.show_our_legal or legal.show_ad_and_legal_combined)
+                    and g.our_legal_h)
+    return show_ad or show_our or platform
+
+
 def active_status(project: Project, region: str) -> str:
     """Ключ активного варианта даты (date / now ...), он же {status} в имени."""
     node = project.manifest["elements"]["by_region"].get(region)
@@ -493,6 +514,13 @@ def export(project: Project, app: AppConfig, opts: ExportOptions) -> list[str]:
                     else:
                         ctx_full.pf.legal.show_ad_label = True
                         ctx_full.pf.legal.show_our_legal = True
+                # strip_legal (экспорт без юр.информации): «полный» рендер тоже
+                # выпускаем без юр.блока — тогда файл ровно один на вариант.
+                if opts.strip_legal:
+                    ctx_full.pf.legal.show_ad_label = False
+                    ctx_full.pf.legal.show_our_legal = False
+                    ctx_full.pf.legal.show_ad_and_legal_combined = False
+                    ctx_full.pf.legal.show_platform_legal = False
                 fname = export_filename(project.movie_title, region, fmt.width,
                                         fmt.height, status)
 
@@ -502,15 +530,21 @@ def export(project: Project, app: AppConfig, opts: ExportOptions) -> list[str]:
                     img_full.save(full_path)
                     written.append(full_path)
 
-                    ctx_clean = apply_export_shadow(project.build_context(app, key))
-                    ctx_clean.pf.legal.show_ad_label = False
-                    ctx_clean.pf.legal.show_our_legal = False
-                    ctx_clean.pf.legal.show_ad_and_legal_combined = False
-                    ctx_clean.pf.legal.show_platform_legal = False
-                    img_clean = render_format(ctx_clean, with_background=False, with_safe_zone=False)
-                    clean_path = os.path.join(subdir, fname + "_clean.png")
-                    img_clean.save(clean_path)
-                    written.append(clean_path)
+                    # «clean» (без юр.инфо) пишем ТОЛЬКО если он реально
+                    # отличается от полного. Для KZ (п.3) и форматов без
+                    # включённой юр.инфо (п.8) юр.контента нет вовсе — полный
+                    # рендер УЖЕ чистый, и второй файл был бы байт-в-байт копией
+                    # (те самые «2 лишние плашки на формат»).
+                    if _legal_present(ctx_full):
+                        ctx_clean = apply_export_shadow(project.build_context(app, key))
+                        ctx_clean.pf.legal.show_ad_label = False
+                        ctx_clean.pf.legal.show_our_legal = False
+                        ctx_clean.pf.legal.show_ad_and_legal_combined = False
+                        ctx_clean.pf.legal.show_platform_legal = False
+                        img_clean = render_format(ctx_clean, with_background=False, with_safe_zone=False)
+                        clean_path = os.path.join(subdir, fname + "_clean.png")
+                        img_clean.save(clean_path)
+                        written.append(clean_path)
 
                 if opts.export_jpeg_for_approval:
                     approval = render_format(ctx_full, with_background=True, with_safe_zone=False)
@@ -520,12 +554,21 @@ def export(project: Project, app: AppConfig, opts: ExportOptions) -> list[str]:
                     written.append(jpg_path)
 
                 if opts.export_psd:
-                    from .engine.compositor import render_layers
+                    from .engine.compositor import render_layers, render_layers_for_psd
                     from .engine.psd import write_psd
+                    from .engine.psd_smart import write_psd_smart
                     img_full_psd = render_format(ctx_full, with_background=False, with_safe_zone=False)
-                    layers = render_layers(ctx_full)
                     psd_path = os.path.join(subdir, fname + ".psd")
-                    write_psd(psd_path, (fmt.width, fmt.height), layers, img_full_psd)
+                    # п.4: PSD со смарт-объектами (элементы — встроенные оригиналы в
+                    # исходном разрешении, структура выверена по эталону Photoshop).
+                    # При любом сбое self-check внутри writer'а откатываемся на
+                    # проверенный растровый PSD — битый файл не отдаём никогда.
+                    try:
+                        specs = render_layers_for_psd(ctx_full)
+                        write_psd_smart(psd_path, (fmt.width, fmt.height), specs, img_full_psd)
+                    except Exception:
+                        write_psd(psd_path, (fmt.width, fmt.height),
+                                  render_layers(ctx_full), img_full_psd)
                     written.append(psd_path)
 
         # вернуть active variant на "date" после экспорта

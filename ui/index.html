@@ -157,6 +157,18 @@
       </div>
       <div class="create-note" id="create-note"></div>
     </div>
+
+    <!-- п.2: полноэкранная зона дропа — при перетаскивании файлов можно
+         бросить их в любое место экрана, материалы распознаются автоматически -->
+    <div class="fullscreen-drop" id="create-fulldrop" aria-hidden="true">
+      <div class="fsd-inner">
+        <div class="fsd-icon">
+          <svg viewBox="0 0 48 48" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 32V10M16 18l8-8 8 8"/><path d="M8 30v6a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-6"/></svg>
+        </div>
+        <div class="fsd-title">Отпустите файлы</div>
+        <div class="fsd-sub">Разложу материалы по зонам автоматически</div>
+      </div>
+    </div>
   </div>
 
   <!-- ОСНОВНОЙ ЭКРАН (4 зоны) ---------------------------------------------- -->
@@ -193,6 +205,10 @@
       <!-- верхняя шестерёнка = глобальные настройки приложения -->
       <div class="topbar-right">
         <div class="toast" id="toast"></div>
+        <!-- п.6: кнопка сохранения — слева от «i» в кружочке -->
+        <button class="icon-btn save-btn" id="btn-save" title="Сохранить проект (⌘+S)">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+        </button>
         <button class="icon-btn info-btn" id="btn-hotkeys" title="Горячие клавиши">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
         </button>
@@ -346,7 +362,7 @@
             <input type="checkbox" id="exp-jpeg" class="switch"><span class="switch-vis" aria-hidden="true"></span>
           </label>
           <label class="opt-row">
-            <span class="opt-text"><span class="opt-name">PSD</span></span>
+            <span class="opt-text"><span class="opt-name">PSD</span><span class="opt-note">со смарт-объектами</span></span>
             <input type="checkbox" id="exp-psd" class="switch"><span class="switch-vis" aria-hidden="true"></span>
           </label>
           <label class="opt-row" id="exp-now-row">
@@ -396,10 +412,10 @@
     <div class="modal modal-hotkeys">
       <h3>Горячие клавиши</h3>
       <div class="hotkey-list">
-        <div class="hk-row"><span class="hk-keys"><kbd>⌘</kbd><kbd>S</kbd></span><span class="hk-desc">Сохранить проект</span></div>
-        <div class="hk-row"><span class="hk-keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>S</kbd></span><span class="hk-desc">Сохранить как… (дубликат)</span></div>
-        <div class="hk-row"><span class="hk-keys"><kbd>⌘</kbd><kbd>Z</kbd></span><span class="hk-desc">Отменить редактирование</span></div>
-        <div class="hk-row"><span class="hk-keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>Z</kbd></span><span class="hk-desc">Повторить редактирование</span></div>
+        <div class="hk-row"><span class="hk-keys"><kbd class="kbd-mod">⌘</kbd><kbd>S</kbd></span><span class="hk-desc">Сохранить проект</span></div>
+        <div class="hk-row"><span class="hk-keys"><kbd class="kbd-mod">⌘</kbd><kbd class="kbd-shift">⇧</kbd><kbd>S</kbd></span><span class="hk-desc">Сохранить как… (дубликат)</span></div>
+        <div class="hk-row"><span class="hk-keys"><kbd class="kbd-mod">⌘</kbd><kbd>Z</kbd></span><span class="hk-desc">Отменить редактирование</span></div>
+        <div class="hk-row"><span class="hk-keys"><kbd class="kbd-mod">⌘</kbd><kbd class="kbd-shift">⇧</kbd><kbd>Z</kbd></span><span class="hk-desc">Повторить редактирование</span></div>
         <div class="hk-row"><span class="hk-keys"><kbd>←</kbd> <kbd>→</kbd></span><span class="hk-desc">Переключить формат</span></div>
         <div class="hk-row"><span class="hk-keys"><kbd>Ctrl</kbd>+<kbd>колесо</kbd></span><span class="hk-desc">Зум к курсору</span></div>
         <div class="hk-row"><span class="hk-keys">Колесо / трекпад</span><span class="hk-desc">Панорамирование</span></div>
@@ -422,6 +438,23 @@
         <button class="btn-secondary" id="exit-nosave" style="color:var(--cherry)">Не сохранять</button>
         <button class="btn-export" id="exit-save">Сохранить</button>
       </div>
+    </div>
+  </div>
+
+  <!-- п.1: оверлей загрузки проекта (импорт .plshk может занять момент) ----- -->
+  <div class="app-loader" id="app-loader" aria-hidden="true">
+    <div class="al-inner">
+      <div class="al-mascot">
+        <svg width="88" height="88" viewBox="0 0 120 116" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+          <g class="al-arm-l"><path d="M37 56 H18"/><path d="M18 56 V34"/></g>
+          <g class="al-arm-r"><path d="M83 56 H102"/><path d="M102 56 V34"/></g>
+          <path d="M50 86 V104"/><path d="M70 86 V104"/>
+          <rect x="37" y="40" width="46" height="46" rx="5"/>
+          <path d="M47 52 H54"/><path d="M66 52 H73"/>
+        </svg>
+      </div>
+      <div class="al-title" id="app-loader-title">Открываю проект…</div>
+      <div class="al-bar"><span></span></div>
     </div>
   </div>
 

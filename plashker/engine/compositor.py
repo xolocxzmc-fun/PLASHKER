@@ -507,6 +507,96 @@ def render_layers(ctx: RenderContext) -> list[tuple[str, Image.Image]]:
 
 
 # ---------------------------------------------------------------------------
+# Смарт-объекты для PSD (п.4): к каждому слою, у которого есть ОДИН исходный
+# файл, прикладываем спеку встраиваемого смарт-объекта — оригинальные байты
+# файла + трансформ, размещающий его на холсте так, чтобы контент совпал со
+# сведённым растром слоя.
+# ---------------------------------------------------------------------------
+
+def _smart_source_paths(ctx: RenderContext) -> dict:
+    """name → абсолютный путь единственного исходника слоя (или None).
+
+    Смарт-объект делаем только там, где источник ОДНОЗНАЧЕН. Творческие слои
+    (Title/Date/VO) — всегда. Юр.слои — только если рисуется ровно один файл
+    (иначе слой остаётся растровым, что безопасно)."""
+    s = ctx.pf.settings
+    legal = ctx.pf.legal
+    g = ctx.globals_
+    src: dict = {}
+    src["Title"] = (_resolve(ctx.assets_root, ctx.title.file)
+                    if ctx.title is not None and getattr(s, "show_title", True) else None)
+    src["Date"] = (_resolve(ctx.assets_root, ctx.date.file)
+                   if ctx.date is not None and getattr(s, "show_date", True) else None)
+    src["VO (rating)"] = (_resolve(ctx.assets_root, ctx.rating.file)
+                          if ctx.rating is not None and getattr(s, "show_rating", True) else None)
+    platform = bool(legal.show_platform_legal and legal.platform_legal_file)
+    if ctx.fmt.legal_is_vertical:
+        src["REKLAMA"] = None
+        combined = legal.show_ad_and_legal_combined and g.ad_and_legal_combined_v
+        src["Legal info"] = (_resolve(ctx.global_root, g.ad_and_legal_combined_v)
+                             if combined and not platform else None)
+    else:
+        show_ad = legal.show_ad_label or legal.show_ad_and_legal_combined
+        show_our = legal.show_our_legal or legal.show_ad_and_legal_combined
+        src["REKLAMA"] = (_resolve(ctx.global_root, g.ad_label_h)
+                          if show_ad and g.ad_label_h else None)
+        src["Legal info"] = (_resolve(ctx.global_root, g.our_legal_h)
+                             if show_our and g.our_legal_h and not platform else None)
+    return src
+
+
+def _smart_spec(path: Optional[str], layer_img: Image.Image) -> Optional[dict]:
+    """Спека смарт-объекта для слоя.
+
+    Встраиваем ВЕСЬ оригинальный файл (в его исходном разрешении), а трансформ
+    считаем так, чтобы видимый контент оригинала лёг ровно в bbox растрового
+    слоя. Возвращаем None, если слой пуст или источник недоступен."""
+    if not path or not os.path.exists(path):
+        return None
+    bbox = layer_img.getbbox()
+    if bbox is None:
+        return None
+    left, top, right, bottom = bbox
+    bw, bh = right - left, bottom - top
+    if bw <= 0 or bh <= 0:
+        return None
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+        orig = assets.load_rgba(path)
+        ow, oh = orig.size
+        cx0, cy0, cx1, cy1 = assets.content_bbox_pct(path)
+    except Exception:
+        return None
+    cw = max(1.0, (cx1 - cx0) * ow)
+    ch = max(1.0, (cy1 - cy0) * oh)
+    sx = bw / cw
+    sy = bh / ch
+    # где на холсте оказался бы ВЕСЬ файл при этом масштабе (с учётом полей)
+    full_left = left - cx0 * ow * sx
+    full_top = top - cy0 * oh * sy
+    full_right = full_left + ow * sx
+    full_bottom = full_top + oh * sy
+    transform = (full_left, full_top, full_right, full_top,
+                 full_right, full_bottom, full_left, full_bottom)
+    return {"data": data, "orig_size": (int(ow), int(oh)), "transform": transform}
+
+
+def render_layers_for_psd(ctx: RenderContext) -> list[dict]:
+    """Слои для PSD-экспорта со смарт-спеками (п.4).
+
+    [{name, image (RGBA на весь холст), smart: dict|None}, ...] в том же
+    порядке, что и render_layers()."""
+    layers = render_layers(ctx)
+    sources = _smart_source_paths(ctx)
+    out: list[dict] = []
+    for name, img in layers:
+        out.append({"name": name, "image": img,
+                    "smart": _smart_spec(sources.get(name), img)})
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Вспомогательное
 # ---------------------------------------------------------------------------
 
@@ -556,4 +646,4 @@ def _draw_safe_zone_overlay(canvas: Image.Image, frame: geo.Rect,
         draw.line([frame.x0, frame.cy, frame.x1, frame.cy], fill=line, width=2)
 
 
-__all__ = ["RenderContext", "render_format", "render_layers"]
+__all__ = ["RenderContext", "render_format", "render_layers", "render_layers_for_psd"]
